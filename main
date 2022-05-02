@@ -1,0 +1,252 @@
+#Quinten white
+
+#player class
+
+#quinten white
+#3/9/2022
+#pygame Project template
+
+#imports
+import pygame as pg
+from settings import *
+import random
+from player import *
+from enemy import *
+from power_ups import *
+
+font_name = pg.font.match_font("Comic Sans MS")
+#setup pygame
+pg.init()    #initializes pygame
+pg.mixer.init()    #sets up the sound and initializes sound
+
+#HUD methods
+def draw_text(surf,text, size, x,y, color):
+    font = pg.font.Font(font_name,size)
+    text_surf = font.render(text,True,color)
+    text_rect = text_surf.get_rect()
+    text_rect.midtop = (x,y)
+    surf.blit(text_surf,text_rect)
+
+def draw_bar(surf, x,y,pct,color):
+    if pct < 0:
+        pct = 0
+    bar_height = 25
+    bar_length = 200
+    fill = (pct/100)*bar_length
+    outline_rect = pg.Rect(x,y,bar_length, bar_height)
+    fill_rect = pg.Rect(x,y,fill,bar_height)
+    pg.draw.rect(surf, color, fill_rect)
+    pg.draw.rect(surf,WHITE,outline_rect,3)
+
+def draw_lives(surf, x, y, lives, img):
+    for i in range(lives):
+        img_rect = img.get_rect()
+        img_rect.x = x+30*i
+        img_rect.y = y
+        surf.blit(img, img_rect)
+
+def show_gameover_screen():
+    screen.blit(background, background_rect)
+    draw_text(screen,TITLE, 80,WIDTH/2, HEIGHT/4,RED)
+    draw_text(screen,"Arrow keys to move space to fire",30,WIDTH/2,HEIGHT/2, WHITE)
+    draw_text(screen,"press any key to play click the x to close",20,WIDTH/2,HEIGHT*3/4, BLUE)
+    pg.display.flip()
+    waiting = True
+    while waiting:
+        clock.tick(FPS)
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+            if event.type == pg.KEYUP:
+                waiting = False
+
+
+
+
+
+#create game objects
+screen = pg.display.set_mode((WIDTH,HEIGHT))    #defines the screen
+pg.display.set_caption(TITLE)
+clock = pg.time.Clock()          #defines the clock
+all_sprites = pg.sprite.Group()
+player_group = pg.sprite.Group()
+enemy_group = pg.sprite.Group()
+bullet_group = pg.sprite.Group()
+#loading images
+background = pg.image.load(os.path.join(img_folder, "spacebackground.png")).convert()
+background = pg.transform.scale(background, (WIDTH, HEIGHT))
+background_rect = background.get_rect()
+
+player_img = pg.image.load(os.path.join(img_folder,"spaceship.png")).convert()
+
+bullet_img = pg.image.load(os.path.join(img_folder,"laserRed16.png")).convert()
+
+pow_img = {}
+pow_img["shield"] = pg.image.load(os. path.join(img_folder, "shield_gold.png")).convert()
+pow_img["gun"] = pg.image.load(os.path.join(img_folder,"bolt_gold.png")).convert()
+pow_img["fuel"] = pg.image.load(os. path.join(img_folder, "shield_gold.png")).convert()
+
+
+metior_img_list = []
+metior_list = ["meteorBrown_big1.png","meteorBrown_med1.png", "meteorBrown_small1.png", "meteorBrown_tiny1.png",
+               "meteorBrown_big2.png","meteorBrown_med3.png", "meteorBrown_small2.png", "meteorBrown_tiny2.png",
+               "meteorBrown_big3.png","meteorBrown_med3.png", "meteorGrey_Big1.png","meteorGrey_big3.png","meteorGrey_big2.png",
+               "meteorGrey_small1.png","meteorGrey_small2.png", "meteorGrey_med1.png","meteorGrey_med2.png","meteorGrey_tiny1.png","meteorGrey_tiny2.png"]
+for img in metior_list:
+    enemy_img = pg.image.load(os.path.join(img_folder,img)).convert()
+    metior_img_list.append(enemy_img)
+
+
+
+#loading in sound
+shoot_fx = pg.mixer.Sound(os.path.join(fx_folder, "Lazer Fire 2.wav"))
+exp_name = ["Explosion 4.wav"]
+expsnd = []
+for snd in exp_name:
+    expsnd.append(pg.mixer.Sound(os.path.join(fx_folder,snd)))
+music = pg.mixer.music.load(os.path.join(music_folder, "MattOglseby - 1.ogg"))
+pg.mixer_music.set_volume(25)
+pow_snd = pg.mixer.Sound(os.path.join(music_folder,"MattOglseby - 1.ogg"))
+
+
+
+
+##Creating the player
+score = 0
+player = Player(player_img,bullet_img,all_sprites, bullet_group,shoot_fx)
+for i in range(20):
+    e = Mobs(random.choice(metior_img_list ))
+    enemy_group.add(e)
+    all_sprites.add(e)
+
+#add all sprite groups
+player_group.add(player)
+all_sprites.add(player,e)
+enemy_group.add(e)
+
+
+
+
+running = True
+game_over = True
+pg.mixer.music.play(loops=-1)
+
+# main game loop
+while running:
+    if game_over:
+        show_gameover_screen()
+        game_over = False
+
+        all_sprites = pg.sprite.Group()
+        player_group = pg.sprite.Group()
+        enemy_group = pg.sprite.Group()
+        bullet_group = pg.sprite.Group()
+        pow_group = pg.sprite.Group()
+        player = Player(player_img, bullet_img, all_sprites, bullet_group, shoot_fx)
+        for i in range(20):
+            e = Mobs(random.choice(metior_img_list))
+            enemy_group.add(e)
+            all_sprites.add(e)
+        # add all sprite groups
+        player_group.add(player)
+        all_sprites.add(player, e)
+        enemy_group.add(e)
+        score = 0
+
+
+
+    #tick clock
+    clock.tick(FPS)  #how fast the game is
+
+
+
+
+    #process events that happen
+    hits = pg.sprite.spritecollide(player,enemy_group, True,pg.sprite.collide_circle )    #COLLISION BETWEEN ENEMY AND PLAYER
+    if hits:
+        for hit in hits:
+            #plays explosion
+            random.choice(expsnd).play
+            player.take_damage(hit )
+            e = Mobs(random.choice(metior_img_list))
+            enemy_group.add(e)
+            all_sprites.add(e)
+            if player.sheild<=0:
+                running = False
+
+            #damage player
+            #destroy astroids
+            #spawn replacement
+
+    hits = pg.sprite.groupcollide(enemy_group,bullet_group,True,True)
+    if hits:
+       for hit in hits:
+            score += int(50 - hit.radius)
+
+            e = Mobs(random.choice(metior_img_list))
+            enemy_group.add(e)
+            all_sprites.add(e)
+            random.choice(expsnd).play()
+            if random.random() > 0.9:
+                pow = Pow(hit.rect.center, pow_img)
+                all_sprites.add(pow)
+                pow_group.add(pow)
+
+    hits = pg.sprite.spritecollide(player, pow_group, True)
+    if hits:
+        for hit in hits:
+            pow_snd.play()
+            if hit.type == "shield":
+                amount = random.randint(25, 80)
+                player.addShield(amount)
+                player.add_fuel()
+            if hit.type == "gun":
+                player.gun_up()
+
+                # if player gets pow
+    # hits = pg.sprite.spritecollide(player, pow_group, True)
+    # if hits:
+    #     for hit in hits:
+    #         pow_snd.play()
+    #         if hit.type == "shield":
+    #             amount = random.randint(25, 80)
+    #             player.addShield(amount)
+    #             player.add_fuel()
+    #
+    #         if hit.type == "gun":
+    #             print("in function")
+    #             player.gun_up()
+    #             print("adding fuel")
+    #             player.add_fuel()
+    #             print("added fuel")
+
+
+
+
+    for event in pg.event.get():
+
+        if event.type == pg.QUIT:
+            running = False
+
+
+
+
+
+    #update the display
+    all_sprites.update()
+
+
+    #render / draw it to the screen
+    screen.fill(BLACK)
+    screen.blit(background,background_rect)
+    all_sprites.draw(screen)
+
+    #draws the hud elements
+    draw_text(screen,str(score), 25, WIDTH/2, 25, WHITE)
+    draw_bar(screen, 25,25,player.sheild,GREEN   )
+    draw_text(screen,"Sheild",20,60,45,WHITE)
+    draw_bar(screen,375,25,player.fuel,BLUE)
+    draw_text(screen,"Fuel",20,400,45,WHITE)
+    #draw_lives(screen,WIDTH-100,10,player.lives,player_mini_img)
+
+    pg.display.flip()
